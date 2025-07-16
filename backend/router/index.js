@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const api = require("./api");
 
-// localhost:3000/api
+// localhost:9988/api
 // api route
 router.use("/api", api);
 
