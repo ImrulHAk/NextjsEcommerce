@@ -1,4 +1,5 @@
 const emailValidation = require("../helpers/emailvalidation");
+const Rendom_otp = require("../helpers/rendom-otp");
 const sendEmail = require("../helpers/sendEmail");
 const userModel = require("../model/userModel");
 const bcrypt = require("bcrypt");
@@ -8,6 +9,7 @@ const SignupController = async (req, res) => {
   let { username, email, password } = req.body;
 
   try {
+    const otp = Rendom_otp();
     bcrypt.hash(password, 10, async function (err, hash) {
       if (err) {
         return res.status(400).json({
@@ -25,10 +27,21 @@ const SignupController = async (req, res) => {
           username,
           email,
           password: hash,
+          otp,
         });
 
         await user.save();
-        sendEmail(email);
+        sendEmail(email, otp);
+
+        setTimeout(async () => {
+          await userModel
+            .findOneAndUpdate({ email }, { otp: null })
+            .then(() => {
+              console.log("otp deleted");
+            });
+          user.save();
+        }, 60000);
+
         return res
           .status(200)
           .json({ success: true, message: "user created successfully", user });
@@ -47,4 +60,31 @@ const SigninController = async (req, res) => {
   res.send("Login user route");
 };
 
-module.exports = { SignupController, SigninController };
+// cheakotp controller
+const CheakotpController = async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const otpverify = await userModel.findOne({ email });
+
+    if (otpverify.otp == otp) {
+      otpverify.isVerify = true;
+      otpverify.otp = null;
+
+      await otpverify.save();
+
+      return res
+        .status(200)
+        .json({ success: true, message: "Your email is verified" });
+    } else {
+      return res.status(400).json({ success: false, message: "invalid otp" });
+    }
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "something want wrong",
+    });
+  }
+};
+
+module.exports = { SignupController, SigninController, CheakotpController };
