@@ -1,3 +1,4 @@
+const { json } = require("express");
 const emailValidation = require("../helpers/emailvalidation");
 const Rendom_otp = require("../helpers/rendom-otp");
 const sendEmail = require("../helpers/sendEmail");
@@ -55,11 +56,6 @@ const SignupController = async (req, res) => {
   }
 };
 
-// SignIn controller
-const SigninController = async (req, res) => {
-  res.send("Login user route");
-};
-
 // cheakotp controller
 const CheakotpController = async (req, res) => {
   const { email, otp } = req.body;
@@ -78,6 +74,44 @@ const CheakotpController = async (req, res) => {
         .json({ success: true, message: "Your email is verified" });
     } else {
       return res.status(400).json({ success: false, message: "invalid otp" });
+    }
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "something want wrong",
+    });
+  }
+};
+
+// SignIn controller
+const SigninController = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const existinguser = await userModel.findone({ email });
+
+    if (!existinguser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "wrong information" });
+    } else {
+      bcrypt.compare(password, existinguser.password, function (err, result) {
+        if (!err) {
+          if (result) {
+            return res.status(200).json({
+              success: true,
+              message: "Login successfull",
+              data: existinguser,
+            });
+          } else {
+            return res
+              .status(404)
+              .json({ success: false, message: "invalid password" });
+          }
+        } else {
+          return res.status(500).json({ success: false, message: err });
+        }
+      });
     }
   } catch (error) {
     return res.status(400).json({
