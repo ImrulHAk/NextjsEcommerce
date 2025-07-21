@@ -4,6 +4,7 @@ const Rendom_otp = require("../helpers/rendom-otp");
 const sendEmail = require("../helpers/sendEmail");
 const userModel = require("../model/userModel");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 // SignUp controller
 const SignupController = async (req, res) => {
@@ -98,10 +99,20 @@ const SigninController = async (req, res) => {
       bcrypt.compare(password, existinguser.password, function (err, result) {
         if (!err) {
           if (result) {
+            let userdata = {
+              id: existinguser._id,
+              email: existinguser.email,
+              role: existinguser.role,
+            };
+            const token = jwt.sign({ userdata }, process.env.jwtsecret, {
+              expiresIn: "1h",
+            });
+            res.cookie("token", token);
             return res.status(200).json({
               success: true,
               message: "Login successfull",
-              data: existinguser,
+              data: userdata,
+              token: token,
             });
           } else {
             return res
